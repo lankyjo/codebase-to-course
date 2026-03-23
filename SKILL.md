@@ -34,6 +34,7 @@ The target learner is a **"vibe coder"** — someone who builds software by inst
 - **Intervene when AI gets stuck** — break out of bug loops, debug issues, unblock themselves
 - Build more advanced software with **production-level quality and reliability**
 - Be **technically fluent** enough to discuss decisions with engineers confidently
+- **Acquire the vocabulary of software** — learn the precise technical terms so they can describe requirements clearly and unambiguously to AI coding agents (e.g., knowing to say "namespace package" instead of "shared folder thing")
 
 **They are NOT trying to become software engineers.** They want coding as a superpower that amplifies what they're already good at. They don't need to write code from scratch — they need to *read* it, *understand* it, and *direct* it.
 
@@ -79,7 +80,7 @@ Structure the course as 5-8 modules. The arc always starts from what the learner
 | 6 | When things break | Build debugging intuition so you can escape AI bug loops |
 | 7 | The big picture | See the full architecture so you can make better decisions about what to build next |
 
-Not every codebase needs all 7. A simple CLI tool might only need 4-5 modules. A microservices app might need more. Adapt the arc to the codebase's complexity.
+Not every codebase needs all 7. A simple CLI tool might only need 4-5 modules. A microservices app might need 8. Adapt the arc to the codebase's complexity — use your judgment on which modules are worth including based on what would actually help the learner steer AI and debug better.
 
 **The key principle:** Every module should connect back to a practical skill — steering AI, debugging, making decisions. If a module doesn't help the learner DO something better, cut it or reframe it until it does.
 
@@ -106,17 +107,11 @@ Generate a single HTML file with embedded CSS and JavaScript. Read `references/d
 
 **Critical implementation rules:**
 - The file must be completely self-contained (only external dependency: Google Fonts CDN)
-- Use CSS `scroll-snap-type: y proximity` (NOT mandatory — mandatory traps users in long modules)
+- Use CSS `scroll-snap-type: y proximity` (NOT `mandatory` — mandatory traps users in long modules)
 - Use `min-height: 100dvh` with `100vh` fallback for sections
-- Use Intersection Observer for scroll animations (broad browser support)
-- Only animate `transform` and `opacity` (GPU-composited, no jank)
-- Cache all DOM queries at initialization (don't re-query in scroll handlers)
-- Use `requestAnimationFrame` for scroll handler throttling
-- Add `passive: true` on scroll listeners
-- Wrap all JS in an IIFE to avoid global pollution
-- Include touch support for all drag-and-drop interactions
-- Add keyboard navigation (arrow keys for module navigation)
-- Add ARIA attributes for accessibility (roles, labels, selected states)
+- Only animate `transform` and `opacity` for GPU performance
+- Wrap all JS in an IIFE, use `passive: true` on scroll listeners, throttle with `requestAnimationFrame`
+- Include touch support for drag-and-drop, keyboard navigation (arrow keys), and ARIA attributes
 
 ### Phase 4: Review and Open
 
@@ -173,6 +168,19 @@ Use "aha!" callout boxes for universal CS insights. Use humor where natural (not
 ### Glossary Tooltips — No Term Left Behind
 Every technical term (API, DOM, callback, middleware, etc.) gets a dashed-underline tooltip on first use in each module. Hover on desktop or tap on mobile to see a 1-2 sentence plain-English definition. The learner should never have to leave the page to Google a term. This is the difference between a course that *says* it's for non-technical people and one that actually *is*.
 
+**Be extremely aggressive with tooltips.** If there is even a 1% chance a non-technical person doesn't know a word, tooltip it. This includes:
+- Software names they might not know (Blender, GIMP, Audacity, etc.)
+- Everyday developer terms (REPL, JSON, flag, CLI, API, SDK, etc.)
+- Programming concepts (function, variable, dictionary, class, module, etc.)
+- Infrastructure terms (PATH, pip, namespace, entry point, etc.)
+- Acronyms — ALWAYS tooltip acronyms on first use
+
+**The vocabulary IS the learning.** One of the key goals is for learners to acquire the precise technical vocabulary they need to communicate with AI coding agents. Each tooltip should teach the term in a way that helps the learner USE it in their own instructions — e.g., "A **flag** is an option you add to a command to change its behavior — like adding '--json' to get structured data instead of plain text. When talking to AI, you'd say 'add a flag for verbose output.'"
+
+**Cursor:** Use `cursor: pointer` on terms (not `cursor: help`). The question-mark cursor feels clinical — a pointer feels clickable and inviting.
+
+**Tooltip overflow fix:** Translation blocks and other containers with `overflow: hidden` will clip tooltips. To fix this, the tooltip JS must use `position: fixed` and calculate coordinates from `getBoundingClientRect()` instead of relying on CSS `position: absolute` within the container. Append tooltips to `document.body` rather than inside the term element. This ensures tooltips are never clipped by any ancestor's overflow.
+
 ### Quizzes That Test Application, Not Memory
 
 The goal of learning is practical application — being able to *do something* with what you learned. Quizzes should test whether the learner can use their knowledge to solve a new problem, not whether they can regurgitate a definition.
@@ -212,6 +220,39 @@ The visual design should feel like a **beautiful developer notebook** — warm, 
 - **Alternating backgrounds**: Even/odd modules alternate between two warm background tones for visual rhythm
 - **Dark code blocks**: IDE-style with Catppuccin-inspired syntax highlighting on deep indigo-charcoal (#1E1E2E)
 - **Depth without harshness**: Subtle warm shadows, never black drop shadows
+
+---
+
+## Gotchas — Common Failure Points
+
+These are real problems encountered when building courses. Check every one before considering a course complete.
+
+### Tooltip Clipping
+Translation blocks use `overflow: hidden` for code wrapping. If tooltips use `position: absolute` inside the term element, they get clipped by the container. **Fix:** Tooltips must use `position: fixed` and be appended to `document.body`. Calculate position from `getBoundingClientRect()`. This is already specified in the reference files but is the #1 bug that appears in every build.
+
+### Not Enough Tooltips
+The most common failure is under-tooltipping. Non-technical learners don't know terms like REPL, JSON, flag, entry point, PATH, pip, namespace, function, class, module, PR, E2E, or even software names like Blender/GIMP. **Rule of thumb:** if a term wouldn't appear in everyday conversation with a non-technical friend, tooltip it. Err heavily on the side of too many. BUT: don't tooltip terms the user already knows well from their domain (e.g., AI/ML concepts for someone in AI).
+
+### Walls of Text
+The course looks like a textbook instead of an infographic. This happens when you write more than 2-3 sentences in a row without a visual break. Every screen must be at least 50% visual. Convert any list of 3+ items into cards, any sequence into step cards or flow diagrams, any code explanation into a code↔English translation block.
+
+### Recycled Metaphors
+Using "restaurant" or "kitchen" for everything. Every module needs its own metaphor that feels inevitable for that specific concept. If you catch yourself reaching for the same metaphor twice, stop and find one that fits the concept organically.
+
+### Code Modifications
+Trimming, simplifying, or "cleaning up" code snippets from the codebase. The learner should be able to open the real file and see the exact same code. Instead of editing code to be shorter, *choose* naturally short snippets (5-10 lines) from the codebase that illustrate the point.
+
+### Quiz Questions That Test Memory
+Asking "What does API stand for?" or "Which file handles X?" — those test recall, not understanding. Every quiz question should present a new scenario the learner hasn't seen and ask them to *apply* what they learned.
+
+### Scroll-Snap Mandatory
+Using `scroll-snap-type: y mandatory` traps users inside long modules. Always use `proximity`.
+
+### Module Quality Degradation
+Trying to write all modules in one pass causes later modules to be thin and rushed. Build one module at a time and verify each before moving on.
+
+### Missing Interactive Elements
+A module with only text and code blocks, no interactivity. Every module needs at least one of: quiz, data flow animation, group chat, architecture diagram, drag-and-drop. These aren't decorations — they're how non-technical learners actually process information.
 
 ---
 

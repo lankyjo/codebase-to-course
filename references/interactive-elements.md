@@ -749,7 +749,7 @@ The most important accessibility feature for non-technical learners. Any technic
 ```css
 .term {
   border-bottom: 1.5px dashed var(--color-accent-muted);
-  cursor: help;
+  cursor: pointer;    /* NOT cursor: help — pointer feels clickable and inviting */
   position: relative;
 }
 .term:hover, .term.active {
@@ -757,12 +757,11 @@ The most important accessibility feature for non-technical learners. Any technic
   color: var(--color-accent);
 }
 
-/* The tooltip bubble */
+/* The tooltip bubble — uses position: fixed and is appended to document.body
+   via JS so it is NEVER clipped by ancestor overflow: hidden containers
+   (like translation blocks). See JS section below for positioning logic. */
 .term-tooltip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;        /* CRITICAL: fixed, not absolute — prevents clipping */
   background: var(--color-bg-code);
   color: #CDD6F4;
   padding: var(--space-3) var(--space-4);
@@ -775,7 +774,7 @@ The most important accessibility feature for non-technical learners. Any technic
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--duration-fast);
-  z-index: 100;
+  z-index: 10000;        /* Above everything, including nav */
 }
 /* Arrow pointing down */
 .term-tooltip::after {
@@ -787,8 +786,7 @@ The most important accessibility feature for non-technical learners. Any technic
   border: 6px solid transparent;
   border-top-color: var(--color-bg-code);
 }
-.term:hover .term-tooltip,
-.term.active .term-tooltip {
+.term-tooltip.visible {
   opacity: 1;
 }
 
@@ -805,34 +803,83 @@ The most important accessibility feature for non-technical learners. Any technic
 }
 ```
 
-**JS — handle tap on mobile + auto-flip:**
+**JS — position: fixed tooltips appended to body (never clipped by overflow):**
 ```javascript
-// Mobile: tap to toggle (no hover on touch devices)
+// Tooltip container — appended to body so it's never clipped
+let activeTooltip = null;
+
+function positionTooltip(term, tip) {
+  const rect = term.getBoundingClientRect();
+  const tipWidth = 300; // approximate
+  let left = rect.left + rect.width / 2 - tipWidth / 2;
+  // Clamp to viewport
+  left = Math.max(8, Math.min(left, window.innerWidth - tipWidth - 8));
+
+  // Try above first
+  let top = rect.top - 8;
+  tip.style.left = left + 'px';
+
+  // Position above by default, flip below if no room
+  document.body.appendChild(tip);
+  const tipHeight = tip.offsetHeight;
+  if (rect.top - tipHeight - 8 < 0) {
+    // Flip below
+    tip.style.top = (rect.bottom + 8) + 'px';
+    tip.classList.add('flip');
+  } else {
+    tip.style.top = (rect.top - tipHeight - 8) + 'px';
+    tip.classList.remove('flip');
+  }
+}
+
 document.querySelectorAll('.term').forEach(term => {
-  // Create tooltip element from data attribute
   const tip = document.createElement('span');
   tip.className = 'term-tooltip';
   tip.textContent = term.dataset.definition;
-  term.appendChild(tip);
 
+  // Hover for desktop
+  term.addEventListener('mouseenter', () => {
+    if (activeTooltip && activeTooltip !== tip) {
+      activeTooltip.classList.remove('visible');
+      activeTooltip.remove();
+    }
+    positionTooltip(term, tip);
+    requestAnimationFrame(() => tip.classList.add('visible'));
+    activeTooltip = tip;
+  });
+
+  term.addEventListener('mouseleave', () => {
+    tip.classList.remove('visible');
+    setTimeout(() => { if (!tip.classList.contains('visible')) tip.remove(); }, 150);
+    activeTooltip = null;
+  });
+
+  // Tap for mobile
   term.addEventListener('click', (e) => {
     e.stopPropagation();
-    // Close any other open tooltips
-    document.querySelectorAll('.term.active').forEach(t => {
-      if (t !== term) t.classList.remove('active');
-    });
-    term.classList.toggle('active');
-
-    // Auto-flip if tooltip goes above viewport
-    const rect = tip.getBoundingClientRect();
-    if (rect.top < 0) tip.classList.add('flip');
-    else tip.classList.remove('flip');
+    if (activeTooltip && activeTooltip !== tip) {
+      activeTooltip.classList.remove('visible');
+      activeTooltip.remove();
+    }
+    if (tip.classList.contains('visible')) {
+      tip.classList.remove('visible');
+      tip.remove();
+      activeTooltip = null;
+    } else {
+      positionTooltip(term, tip);
+      requestAnimationFrame(() => tip.classList.add('visible'));
+      activeTooltip = tip;
+    }
   });
 });
 
 // Close tooltips when clicking elsewhere
 document.addEventListener('click', () => {
-  document.querySelectorAll('.term.active').forEach(t => t.classList.remove('active'));
+  if (activeTooltip) {
+    activeTooltip.classList.remove('visible');
+    activeTooltip.remove();
+    activeTooltip = null;
+  }
 });
 ```
 
